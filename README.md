@@ -1,7 +1,7 @@
 # DisputeSentinel
 
 PayPal Sandbox payment evidence and dispute management for digital-service merchants.
-This is the T1.1 scaffold: a FastAPI health endpoint and a React placeholder page.
+Implemented: the T1.1 scaffold and the T1.2 PayPal Sandbox REST service.
 The source-of-truth implementation plan is [PAYOUTSENTINEL_PLAN.md](PAYOUTSENTINEL_PLAN.md),
 with architecture in [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
 
@@ -51,7 +51,47 @@ npm run build
 
 Future integration settings (webhook ID, Gemini model, dispute source, upload
 directory, frontend origin) are listed in `.env.example`; their services are not
-implemented in this scaffold. Production uploads will require persistent storage.
+implemented in this scaffold. The plan uses Postgres BYTEA for production uploads.
+
+## T1.2 PayPal Sandbox check
+
+Set `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` in your private root `.env`.
+Use credentials from a Sandbox REST app. From the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe scripts/paypal_smoke.py --request-id YOUR-UNIQUE-REQUEST-ID
+```
+
+This creates a USD 1.00 Sandbox order, prints its approval link, and lists one
+page of disputes. It does not approve or capture a payment. Reuse the same request
+ID for retries of the same check; choose a new ID for a new order. PayPal retains
+idempotency IDs for a limited time, so do not treat them as permanent deduplication.
+An empty dispute list is a successful access check, not proof that a dispute can
+be created. The dispute-source decision belongs to T1.4.
+
+`PayPalClient` is a synchronous context manager with a 30-second HTTP timeout.
+Reuse an instance to benefit from its locked, expiry-aware OAuth token cache.
+It refreshes once after an HTTP 401; other errors are surfaced without automatic
+retries or response-body logging. Call it from synchronous routes or a worker
+thread when async routes are introduced.
+
+Creation requires a caller-supplied idempotency key. Capture derives a stable key
+from the order ID and returns an already completed order without another capture.
+The service returns raw PayPal data: database uniqueness constraints (T2.1), and
+server-side amount/currency/capture verification before persisting a verified
+transaction (T2.2), are still required. No payment endpoints are exposed yet.
+
+Tests use `httpx.MockTransport`; external network connections are blocked during
+unit tests. Gemini is not invoked by T1.2. Run tests from `backend`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+API references: [OAuth](https://developer.paypal.com/api/rest/authentication),
+[Orders](https://developer.paypal.com/api/orders/v2),
+[Disputes](https://developer.paypal.com/api/customer-disputes/v1), and
+[idempotency](https://developer.paypal.com/api/rest/reference/idempotency/).
 
 ## License
 
