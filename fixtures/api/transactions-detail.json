@@ -1,0 +1,60 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "GET",
+    "path": "/api/transactions/{id}",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "id": 1,
+      "merchant_id": 1,
+      "paypal_order_id": "SANDBOX-ORDER-EXAMPLE",
+      "paypal_capture_id": "SANDBOX-CAPTURE-EXAMPLE",
+      "amount": "1.00",
+      "currency": "USD",
+      "status": "verified",
+      "payer_email": "buyer@example.invalid",
+      "description": "Simulated digital-service delivery",
+      "created_at": "2026-11-03T10:00:00Z",
+      "captured_at": "2026-11-03T10:05:00Z"
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    },
+    {
+      "status": 404,
+      "body": {
+        "detail": {
+          "code": "not_found",
+          "message": "Resource does not exist or is not owned by this merchant."
+        }
+      }
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": {
+          "code": "validation_error",
+          "message": "Request fields are invalid."
+        }
+      }
+    }
+  ]
+}

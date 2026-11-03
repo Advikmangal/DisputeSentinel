@@ -1,0 +1,65 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "GET",
+    "path": "/api/dashboard/summary",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "transaction_count": 1,
+      "verified_transaction_count": 1,
+      "verified_amount_by_currency": {
+        "USD": "1.00"
+      },
+      "readiness_distribution": {
+        "not_analyzed": 0,
+        "low_0_39": 1,
+        "medium_40_69": 0,
+        "high_70_100": 0
+      },
+      "unresolved_disputes": {
+        "total": 1,
+        "paypal": 0,
+        "simulated": 1
+      },
+      "top_missing_evidence": [
+        {
+          "item": "communication_with_buyer",
+          "transaction_count": 1
+        },
+        {
+          "item": "terms_agreement",
+          "transaction_count": 1
+        },
+        {
+          "item": "proof_of_payment_match",
+          "transaction_count": 1
+        },
+        {
+          "item": "usage_access_logs",
+          "transaction_count": 1
+        }
+      ]
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    }
+  ]
+}

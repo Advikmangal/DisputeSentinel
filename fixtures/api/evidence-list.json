@@ -1,0 +1,59 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "GET",
+    "path": "/api/transactions/{id}/evidence",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "items": [
+        {
+          "id": 1,
+          "transaction_id": 1,
+          "filename": "simulated-delivery.pdf",
+          "mime_type": "application/pdf",
+          "size": 2048,
+          "uploaded_at": "2026-11-03T10:10:00Z"
+        }
+      ]
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    },
+    {
+      "status": 404,
+      "body": {
+        "detail": {
+          "code": "not_found",
+          "message": "Resource does not exist or is not owned by this merchant."
+        }
+      }
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": {
+          "code": "validation_error",
+          "message": "Request fields are invalid."
+        }
+      }
+    }
+  ]
+}

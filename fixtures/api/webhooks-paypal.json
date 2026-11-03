@@ -1,0 +1,73 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "PayPal signature verification; no JWT",
+  "request": {
+    "method": "POST",
+    "path": "/api/webhooks/paypal",
+    "headers": {
+      "Content-Type": "application/json",
+      "PAYPAL-AUTH-ALGO": "SHA256withRSA",
+      "PAYPAL-CERT-URL": "https://api-m.sandbox.paypal.com/v1/notifications/certs/EXAMPLE",
+      "PAYPAL-TRANSMISSION-ID": "SANDBOX-TRANSMISSION-EXAMPLE",
+      "PAYPAL-TRANSMISSION-SIG": "<SIGNATURE_PLACEHOLDER>",
+      "PAYPAL-TRANSMISSION-TIME": "2026-11-03T10:00:00Z"
+    },
+    "body": {
+      "id": "SANDBOX-EVENT-EXAMPLE",
+      "event_type": "PAYMENT.CAPTURE.COMPLETED",
+      "resource_type": "capture",
+      "resource": {
+        "id": "SANDBOX-CAPTURE-EXAMPLE",
+        "status": "COMPLETED",
+        "amount": {
+          "currency_code": "USD",
+          "value": "1.00"
+        },
+        "supplementary_data": {
+          "related_ids": {
+            "order_id": "SANDBOX-ORDER-EXAMPLE"
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "status": "ok",
+      "duplicate": false
+    }
+  },
+  "errors": [
+    {
+      "status": 400,
+      "body": {
+        "detail": {
+          "code": "invalid_request",
+          "message": "Request cannot be processed."
+        }
+      }
+    },
+    {
+      "status": 502,
+      "body": {
+        "detail": {
+          "code": "paypal_error",
+          "message": "PayPal Sandbox request failed."
+        }
+      }
+    },
+    {
+      "status": 504,
+      "body": {
+        "detail": {
+          "code": "upstream_timeout",
+          "message": "Upstream request timed out."
+        }
+      }
+    }
+  ]
+}

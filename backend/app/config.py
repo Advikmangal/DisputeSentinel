@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr = SecretStr("")
     paypal_webhook_id: str = ""
     gemini_model: str = ""
+    # T1.4 is partial; revisit after a captured Sandbox payment (docs/DECISIONS.md).
     dispute_source: Literal["fixture", "paypal"] = "fixture"
     upload_dir: Path = Path("uploads")
     frontend_origin: str = "http://localhost:5173"

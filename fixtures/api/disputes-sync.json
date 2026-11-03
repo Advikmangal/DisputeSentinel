@@ -1,0 +1,71 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "POST",
+    "path": "/api/disputes/sync",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>",
+      "Content-Type": "application/json"
+    },
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "source": "fixture",
+      "synced_count": 1,
+      "items": [
+        {
+          "id": 1,
+          "transaction_id": 1,
+          "paypal_dispute_id": "FIXTURE-DISPUTE-001",
+          "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+          "status": "WAITING_FOR_SELLER_RESPONSE",
+          "amount": "1.00",
+          "response_due_at": "2026-11-10T10:00:00Z",
+          "is_fixture": true,
+          "raw": {
+            "dispute_id": "FIXTURE-DISPUTE-001",
+            "dispute_amount": {
+              "currency_code": "USD",
+              "value": "1.00"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    },
+    {
+      "status": 502,
+      "body": {
+        "detail": {
+          "code": "paypal_error",
+          "message": "PayPal Sandbox request failed."
+        }
+      }
+    },
+    {
+      "status": 504,
+      "body": {
+        "detail": {
+          "code": "upstream_timeout",
+          "message": "Upstream request timed out."
+        }
+      }
+    }
+  ]
+}

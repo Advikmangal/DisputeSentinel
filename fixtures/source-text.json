@@ -1,0 +1,13 @@
+{
+  "is_fixture": true,
+  "label": "Simulated",
+  "document_id": 1,
+  "filename": "simulated-delivery.pdf",
+  "pages": [
+    {
+      "page": 1,
+      "text": "The project files were delivered on November 3, 2026."
+    }
+  ],
+  "note": "Synthetic source text for citation consistency only; no PDF was uploaded or analyzed."
+}

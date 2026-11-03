@@ -1,0 +1,80 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "POST",
+    "path": "/api/transactions/{id}/evidence",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>",
+      "Content-Type": "multipart/form-data; boundary=<GENERATED_BY_CLIENT>"
+    },
+    "body": {
+      "file": {
+        "filename": "simulated-delivery.pdf",
+        "content_type": "application/pdf",
+        "content": "<BINARY_PDF_BYTES>"
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "id": 1,
+      "transaction_id": 1,
+      "filename": "simulated-delivery.pdf",
+      "mime_type": "application/pdf",
+      "size": 2048,
+      "uploaded_at": "2026-11-03T10:10:00Z"
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    },
+    {
+      "status": 404,
+      "body": {
+        "detail": {
+          "code": "not_found",
+          "message": "Resource does not exist or is not owned by this merchant."
+        }
+      }
+    },
+    {
+      "status": 413,
+      "body": {
+        "detail": {
+          "code": "file_too_large",
+          "message": "PDF exceeds the 10 MB limit."
+        }
+      }
+    },
+    {
+      "status": 415,
+      "body": {
+        "detail": {
+          "code": "unsupported_media_type",
+          "message": "Only PDF evidence is accepted."
+        }
+      }
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": {
+          "code": "validation_error",
+          "message": "Request fields are invalid."
+        }
+      }
+    }
+  ]
+}

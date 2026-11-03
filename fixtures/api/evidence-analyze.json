@@ -1,0 +1,136 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "POST",
+    "path": "/api/transactions/{id}/analyze",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>",
+      "Content-Type": "application/json"
+    },
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "transaction_id": 1,
+      "facts": [
+        {
+          "id": 1,
+          "document_id": 1,
+          "fact_type": "delivery_date",
+          "value": "2026-11-03",
+          "page": 1,
+          "excerpt": "The project files were delivered on November 3, 2026.",
+          "confidence": 0.95
+        }
+      ],
+      "readiness": {
+        "id": 1,
+        "transaction_id": 1,
+        "score": 20,
+        "breakdown": [
+          {
+            "item": "proof_of_delivery",
+            "status": "present",
+            "points": 20,
+            "max_points": 20
+          },
+          {
+            "item": "communication_with_buyer",
+            "status": "missing",
+            "points": 0,
+            "max_points": 20
+          },
+          {
+            "item": "terms_agreement",
+            "status": "missing",
+            "points": 0,
+            "max_points": 20
+          },
+          {
+            "item": "proof_of_payment_match",
+            "status": "missing",
+            "points": 0,
+            "max_points": 20
+          },
+          {
+            "item": "usage_access_logs",
+            "status": "missing",
+            "points": 0,
+            "max_points": 20
+          }
+        ],
+        "missing_items": [
+          "communication_with_buyer",
+          "terms_agreement",
+          "proof_of_payment_match",
+          "usage_access_logs"
+        ],
+        "recommendations": [
+          "Add buyer communication, the agreement, payment-matching evidence and usage logs."
+        ],
+        "computed_at": "2026-11-03T10:15:00Z"
+      }
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    },
+    {
+      "status": 404,
+      "body": {
+        "detail": {
+          "code": "not_found",
+          "message": "Resource does not exist or is not owned by this merchant."
+        }
+      }
+    },
+    {
+      "status": 409,
+      "body": {
+        "detail": {
+          "code": "conflict",
+          "message": "Operation conflicts with the current resource state."
+        }
+      }
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": {
+          "code": "validation_error",
+          "message": "Request fields are invalid."
+        }
+      }
+    },
+    {
+      "status": 503,
+      "body": {
+        "detail": {
+          "code": "analysis_unavailable",
+          "message": "Analysis is unavailable after bounded retries."
+        }
+      }
+    },
+    {
+      "status": 504,
+      "body": {
+        "detail": {
+          "code": "upstream_timeout",
+          "message": "Upstream request timed out."
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "POST",
+    "path": "/api/payments/create-order",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>",
+      "Content-Type": "application/json",
+      "Idempotency-Key": "example-create-order-001"
+    },
+    "body": {
+      "amount": "1.00",
+      "currency": "USD",
+      "description": "Simulated digital-service delivery"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "transaction": {
+        "id": 1,
+        "merchant_id": 1,
+        "paypal_order_id": "SANDBOX-ORDER-EXAMPLE",
+        "paypal_capture_id": null,
+        "amount": "1.00",
+        "currency": "USD",
+        "status": "created",
+        "payer_email": null,
+        "description": "Simulated digital-service delivery",
+        "created_at": "2026-11-03T10:00:00Z",
+        "captured_at": null
+      },
+      "approval_url": "https://www.sandbox.paypal.com/checkoutnow?token=SANDBOX-ORDER-EXAMPLE"
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    },
+    {
+      "status": 409,
+      "body": {
+        "detail": {
+          "code": "conflict",
+          "message": "Operation conflicts with the current resource state."
+        }
+      }
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": {
+          "code": "validation_error",
+          "message": "Request fields are invalid."
+        }
+      }
+    },
+    {
+      "status": 502,
+      "body": {
+        "detail": {
+          "code": "paypal_error",
+          "message": "PayPal Sandbox request failed."
+        }
+      }
+    },
+    {
+      "status": 504,
+      "body": {
+        "detail": {
+          "code": "upstream_timeout",
+          "message": "Upstream request timed out."
+        }
+      }
+    }
+  ]
+}

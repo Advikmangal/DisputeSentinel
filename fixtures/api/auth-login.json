@@ -1,0 +1,46 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "none",
+  "request": {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "email": "merchant@example.invalid",
+      "password": "<PASSWORD_PLACEHOLDER>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "access_token": "<JWT_PLACEHOLDER>",
+      "token_type": "bearer",
+      "expires_in": 3600
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": {
+          "code": "validation_error",
+          "message": "Request fields are invalid."
+        }
+      }
+    }
+  ]
+}

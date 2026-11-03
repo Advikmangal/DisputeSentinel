@@ -1,0 +1,16 @@
+{
+  "sample_kind": "redacted_observed_subset",
+  "observed_on": "2026-11-03",
+  "environment": "sandbox",
+  "create_order": {
+    "approval_url": "https://www.sandbox.paypal.com/checkoutnow?token=SANDBOX-ORDER-EXAMPLE"
+  },
+  "list_disputes": {
+    "items": []
+  },
+  "notes": [
+    "Only the approval URL and empty items list were printed/confirmed by T1.2.",
+    "This is an observed subset, not a full raw PayPal response. No capture or real dispute was observed.",
+    "All IDs have been replaced. No OAuth token response is stored."
+  ]
+}

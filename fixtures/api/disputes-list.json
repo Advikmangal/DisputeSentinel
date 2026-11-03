@@ -1,0 +1,50 @@
+{
+  "sample_kind": "synthetic_planned_contract",
+  "auth": "merchant JWT",
+  "request": {
+    "method": "GET",
+    "path": "/api/disputes",
+    "headers": {
+      "Authorization": "Bearer <JWT_PLACEHOLDER>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "items": [
+        {
+          "id": 1,
+          "transaction_id": 1,
+          "paypal_dispute_id": "FIXTURE-DISPUTE-001",
+          "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+          "status": "WAITING_FOR_SELLER_RESPONSE",
+          "amount": "1.00",
+          "response_due_at": "2026-11-10T10:00:00Z",
+          "is_fixture": true,
+          "raw": {
+            "dispute_id": "FIXTURE-DISPUTE-001",
+            "dispute_amount": {
+              "currency_code": "USD",
+              "value": "1.00"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "errors": [
+    {
+      "status": 401,
+      "body": {
+        "detail": {
+          "code": "unauthorized",
+          "message": "Missing, invalid or expired merchant token."
+        }
+      }
+    }
+  ]
+}
