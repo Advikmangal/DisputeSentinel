@@ -1036,3 +1036,11 @@ The redacted [smoke subset](../fixtures/paypal-smoke-observed.json) preserves th
 T3.3 also calls for authenticated evidence downloads, but section 6 does not specify that route. Choose its path when implementing T3.3; this reference does not invent an additional endpoint. The JSON export above avoids introducing an unplanned export URL. No public evidence URL is provided.
 
 T1.4 is **partial**, not complete. See [DECISIONS.md](DECISIONS.md) for the pending manual dispute test after T2.3.
+
+## Synthetic deployment demo transactions
+
+Transaction responses also include `is_demo` (boolean), derived from the reserved
+`DEMO-` order ID prefix without a database schema change. The demo rebuild command
+creates only `CREATED` synthetic rows, never verified payments. Capture of a demo
+order returns HTTP 409 with `detail.code` = `demo_transaction`; it makes no PayPal
+request. Ordinary PayPal orders have `is_demo: false`.

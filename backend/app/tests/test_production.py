@@ -18,12 +18,15 @@ def test_production_startup_rejects_invalid_jwt(secret):
             pass
 
 
-def test_production_starts_with_valid_config():
+def test_production_starts_with_valid_config(monkeypatch):
+    calls = []
+    monkeypatch.setattr("app.main.seed_on_startup", lambda settings: calls.append(settings))
     settings = Settings(_env_file=None, environment="production", jwt_secret=secrets.token_hex(32),
                         frontend_origin="https://frontend.example.invalid")
     with TestClient(create_app(settings)) as client:
         assert client.get("/health").json() == {"status": "ok"}
         assert client.get("/api/transactions").status_code == 401
+    assert calls == [settings]
 
 
 def test_cors_allows_only_configured_origin_including_auth_preflight():

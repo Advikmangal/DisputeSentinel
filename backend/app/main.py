@@ -8,6 +8,7 @@ from app.services.payments import PaymentError
 from app.routers.auth import router as auth_router
 from app.services.auth import require_api_auth
 from app.config import Settings, get_settings
+from app.seed_merchant import seed_on_startup
 
 async def payment_error_handler(request, error: PaymentError):
     return JSONResponse(status_code=error.status, content={"detail": {"code": error.code, "message": error.message}})
@@ -23,6 +24,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         settings.validate_production()
+        if settings.environment == "production":
+            seed_on_startup(settings)
         yield
 
     application = FastAPI(title="PayoutSentinel", lifespan=lifespan,

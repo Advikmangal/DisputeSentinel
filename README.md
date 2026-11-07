@@ -142,8 +142,8 @@ From the repository root, after applying migrations:
 .\backend\.venv\Scripts\python.exe scripts/seed_merchant.py
 ```
 
-Seeding creates a merchant or upgrades the disabled T2.2 marker. An existing real
-password hash is left unchanged; rerunning the script does not reset passwords.
+Seeding creates a merchant only if absent. Existing password hashes are always
+left unchanged; rerunning the script does not reset passwords.
 Start the backend and frontend using the commands above. Sign in, enter a USD
 amount, choose Continue to PayPal, then use the SDK's PayPal button to approve
 with a Sandbox **buyer** account distinct from the merchant account. The backend
@@ -189,7 +189,12 @@ MIT; see [LICENSE](LICENSE).
 
 Use [docs/DEPLOY.md](docs/DEPLOY.md) for the Blueprint setup, exact environment
 values to enter privately, URL wiring, merchant seeding and hosted checks.
-`render.yaml` defines managed Postgres, the API and the static frontend.
+`render.yaml` sets all three resources to Free: managed Postgres, the API and
+the static frontend. Production startup creates the demo merchant if absent.
+The frontend waits and retries health checks while the API wakes up.
+Free Postgres expires after 30 days; `scripts/seed_demo_data.py` applies migrations
+and restores labeled synthetic transactions. See the deployment guide for the
+local command and temporary database access steps; no Render Shell is needed.
 No Render resources or public health URL have been verified yet.
 
 Set `VITE_API_URL` to the backend HTTPS origin for Render builds (no `/api` suffix);

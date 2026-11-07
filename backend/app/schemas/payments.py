@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, computed_field
 
 
 class CreateOrder(BaseModel):
@@ -29,6 +29,11 @@ class TransactionOut(BaseModel):
     description: str
     created_at: datetime
     captured_at: datetime | None
+
+    @computed_field
+    @property
+    def is_demo(self) -> bool:
+        return self.paypal_order_id.startswith("DEMO-")
 
     @field_validator("created_at", "captured_at")
     @classmethod

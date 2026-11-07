@@ -1,150 +1,151 @@
-# Deploy PayoutSentinel on Render
+# Deploy on Render Free only
 
-This is deployment preparation. No services have been provisioned and there is
-no verified public health URL yet. T2.4's hosted acceptance remains pending until
-you follow these steps and record the successful URL in README.md.
+This is deployment preparation; no hosted deployment has been verified. All three
+resources in `render.yaml` are free: the database and API declare `plan: free`;
+the static site is inherently free and does not support a `plan` field. There is no disk, pre-deploy
+command, paid worker, or paid service. Keep the workspace on the free Hobby plan.
+Do not attach a payment method for this demo: bandwidth/build overages can be
+charged when one exists. Without one, excess usage suspends services/builds.
+If Render asks for a paid upgrade, stop instead of choosing it.
 
 ## 1. Create the Blueprint
 
-1. Sign in to [Render Dashboard](https://dashboard.render.com/) and select your workspace.
-2. Click **New +**, then **Blueprint**.
-3. Connect GitHub if prompted and grant access to
-   `Advikmangal/DisputeSentinel`. Select that repository and click **Connect**.
-4. Choose branch **master**, name the Blueprint **PayoutSentinel**, and use
-   **render.yaml** as the Blueprint path.
-5. Review the three resources: `payoutsentinel-db` (managed Postgres),
-   `payoutsentinel-api` (Python web service), and `payoutsentinel-web` (static site).
-   The API and database use Singapore. The API uses paid **Starter** for Shell
-   access; the database uses paid **0.1c-256mb**. Review Render's displayed charges
-   before applying. This file does not create or authorize resources by itself.
-6. Supply the prompted environment values below. `sync: false` means you enter
-   values in Render; none are embedded in the Blueprint. Render's creation button
-   may be labeled **Apply** or **Deploy Blueprint**. Click it after reviewing all settings.
+1. Push this commit to `Advikmangal/DisputeSentinel`, branch `master`.
+2. Sign in at https://dashboard.render.com and select your free workspace.
+3. Click **New > Blueprint**, connect GitHub, and select **DisputeSentinel**.
+4. Select branch **master**, Blueprint path **render.yaml**, and a name for the Blueprint.
+5. Review the resources: **payoutsentinel-db** (Free Postgres),
+   **payoutsentinel-api** (Free Python web service), and **payoutsentinel-web**
+   (free static site). Confirm there are no paid resources or disks.
+6. Enter the environment values below privately in Render. Never put credentials
+   in the repository, screenshots, support logs, or chat.
+7. Click **Deploy Blueprint**. Watch each service's **Events** and **Logs**.
 
-The initial frontend/backend URLs might not be known yet. Use
-`https://frontend-pending.invalid` for FRONTEND_ORIGIN and
-`https://api-pending.invalid` for VITE_API_URL if the form needs values before
-creation. These intentionally do not connect anywhere. Replace them with the
-actual assigned URLs in step 2 before trying login. Do not guess Render subdomains.
+The API uses `backend` as its root, Python **3.12.11**, and
+`pip install -r requirements.txt` as its build command. Its start command is:
 
-### API service environment
+```sh
+alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
 
-| Name | Enter in Render |
-|---|---|
-| PAYPAL_CLIENT_ID | Sandbox REST app client ID |
-| PAYPAL_CLIENT_SECRET | Secret for that same Sandbox app |
-| PAYPAL_BASE_URL | Exactly `https://api-m.sandbox.paypal.com` |
-| GEMINI_API_KEY | Your Gemini API key; never expose it to the frontend |
-| JWT_SECRET | A random value of at least 32 characters; use a password manager to generate/store it |
-| DEMO_MERCHANT_EMAIL | Email you want to use for merchant login |
-| DEMO_MERCHANT_PASSWORD | Unique password of 12–1024 characters; no default exists |
-| FRONTEND_ORIGIN | Exact frontend HTTPS origin, with no trailing slash, path, query or wildcard |
+Every start applies migrations, validates production settings, and creates the
+merchant if missing before accepting requests. Startup failure prevents a healthy
+deployment. There is no Shell or pre-deploy step. An existing merchant's password
+is never changed by seeding, including after changing the environment password.
 
-The Blueprint supplies `ENVIRONMENT=production`, `PYTHON_VERSION=3.12.11`, and
-`DISPUTE_SOURCE=fixture`. `DATABASE_URL` is populated automatically from the
-managed database's internal connection string. Do not replace it with a public
-URL or commit it. External database access is disabled by `ipAllowList: []`;
-the API connects on Render's private network.
+## 2. Enter environment values
 
-### Static site environment
+The Blueprint uses `sync: false` for manually supplied variables. It contains no
+credentials. Set the API service values as follows:
 
-| Name | Enter in Render |
-|---|---|
-| VITE_API_URL | API HTTPS origin only, without `/api`; a final slash is tolerated |
-| VITE_PAYPAL_CLIENT_ID | Public client ID of the same **Sandbox** app as the backend |
+| Variable | Value to enter privately |
+| --- | --- |
+| PAYPAL_CLIENT_ID | Sandbox REST application's client ID |
+| PAYPAL_CLIENT_SECRET | Same Sandbox application's secret |
+| PAYPAL_BASE_URL | `https://api-m.sandbox.paypal.com` only |
+| GEMINI_API_KEY | Your Gemini API key |
+| JWT_SECRET | Independently generated random secret, at least 32 characters; no placeholder |
+| DEMO_MERCHANT_EMAIL | Email you will use to sign in |
+| DEMO_MERCHANT_PASSWORD | Strong password of 12–1024 characters; no default |
+| FRONTEND_ORIGIN | Exact frontend HTTPS origin, no path or trailing slash |
 
-Only public build-time configuration belongs on the static site. Never add
-JWT_SECRET, database URLs, merchant passwords or PayPal client secrets under a
-`VITE_` name. Node is pinned to 24.13.0 in the Blueprint. Vite embeds both VITE_
-values at build time; changing them requires a fresh frontend build/deploy.
+`DATABASE_URL` is wired to the database's internal connection string by the
+Blueprint. Do not replace it with a local file or SQLite URL. The app converts
+`postgres://` and `postgresql://` into `postgresql+psycopg://`. The Blueprint also
+sets `ENVIRONMENT=production`, `PYTHON_VERSION=3.12.11`, and
+`DISPUTE_SOURCE=fixture`. Missing/short JWT secrets prevent production startup.
+CORS permits only `FRONTEND_ORIGIN`; there is no wildcard.
 
-## 2. Connect the assigned service URLs
+For the static frontend:
 
-1. Open **payoutsentinel-api** from the Dashboard. Copy its HTTPS `onrender.com`
-   URL from the service page. On **payoutsentinel-web → Environment → Edit**, set
-   `VITE_API_URL` to that URL, excluding a trailing `/api` or other path.
-2. Open **payoutsentinel-web** and copy its HTTPS URL. On
-   **payoutsentinel-api → Environment → Edit**, set `FRONTEND_ORIGIN` to exactly
-   that origin with no trailing slash.
-3. Save both changes. Choose the save option that rebuilds/redeploys the static
-   site; if saving alone, use **Manual Deploy → Deploy latest commit** afterward.
-   Redeploy the API after changing FRONTEND_ORIGIN so CORS reloads its setting.
-4. If you later add a custom frontend domain, repeat the FRONTEND_ORIGIN update
-   using the one intended frontend origin. Alternate origins are deliberately
-   not allowed. CORS is not authentication; JWTs still protect the API.
+| Variable | Value |
+| --- | --- |
+| VITE_API_URL | API HTTPS origin without a trailing slash or `/api` suffix |
+| VITE_PAYPAL_CLIENT_ID | Public client ID of the same Sandbox app |
 
-## 3. Confirm builds and migrations
+Vite embeds these two public values at build time. Never use a secret in a
+`VITE_` variable. The build is `npm ci && npm run build`, published from `dist`
+under root `frontend`. The `/*` rewrite serves `/index.html` for SPA routes.
 
-1. Open **payoutsentinel-api → Events/Logs**. Its root directory is `backend`.
-   Confirm Python **3.12.11** and successful `pip install -r requirements.txt`.
-2. Its start command is:
+## 3. Wire the assigned URLs
 
-   ```sh
-   alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
-   ```
+1. If URLs are unknown during creation, use `https://frontend.example.invalid`
+   and `https://api.example.invalid` temporarily for the two origins.
+2. Open **payoutsentinel-api** and copy its assigned HTTPS URL.
+3. Open **payoutsentinel-web > Environment > Edit**, set `VITE_API_URL` to that
+   API origin, and choose **Save, rebuild, and deploy**.
+4. Copy the static site's assigned HTTPS URL. Open **payoutsentinel-api >
+   Environment > Edit**, set `FRONTEND_ORIGIN` to that exact origin, and save
+   with redeployment. Do not leave the temporary origins in place.
+5. Open the API URL followed by `/health`; expect HTTP 200 and `{"status":"ok"}`.
+6. Open the frontend, sign in using the configured demo merchant, and confirm
+   the transactions page loads. An empty list is expected until a payment or
+   the optional synthetic rebuild below. Logged-out API requests must get 401.
+7. Approve a small Sandbox payment with a Sandbox buyer distinct from the
+   seller. Success is shown only after the backend returns `VERIFIED`.
 
-   Migration failure stops startup. Keep this blueprint at one API instance;
-   do not launch overlapping migration/deploy operations. Never run
-   `alembic downgrade base` on your deployed database because it deletes data.
-3. Missing/short/placeholder JWT_SECRET makes production startup fail with a
-   configuration message. Set a valid secret in **Environment**, then redeploy.
-   Production also requires an HTTPS FRONTEND_ORIGIN. The application accepts
-   Render's `postgres://` or `postgresql://` database URL and uses the psycopg
-   driver while preserving its connection details.
-4. Open the API URL followed by `/health`. Confirm HTTP 200 and
-   `{"status":"ok"}`. This is also the configured Render health check.
-5. Open **payoutsentinel-web → Events/Logs**. Root directory is `frontend`, build
-   command is `npm ci && npm run build`, and publish directory is `dist` relative
-   to that root. The rewrite `/* → /index.html` serves the SPA on nested paths.
+After idle time, the first API operation probes `/health`. If slow, the UI says
+**Waking up the server, this can take a minute** and retries the health check.
+Create/capture POSTs are sent only after readiness, not automatically replayed by
+this retry loop. After bounded retries, a clear error allows a manual retry.
 
-## 4. Seed the demo merchant
+## 4. Rebuild demo data without Render Shell
 
-1. Ensure the API is running and migrations have succeeded.
-2. Open **payoutsentinel-api → Environment** and confirm both DEMO_MERCHANT_EMAIL
-   and DEMO_MERCHANT_PASSWORD are set. Do not paste them into source files or shell commands.
-3. Open the API's **Shell** tab. From the service root (`backend`), run:
+This optional local command restores the merchant plus three synthetic sample
+transactions. It also applies migrations to an empty database. Rows have
+`DEMO-` order IDs, `[DEMO - SIMULATED]` descriptions, and `is_demo: true` in API
+responses. They stay `CREATED`, have no capture ID, display a Demo label, and
+cannot be captured. They are not proof of a PayPal payment. Rerunning preserves
+all existing transactions and passwords and adds only missing demo rows.
 
-   ```sh
-   python -m app.seed_merchant
-   ```
+1. On your computer, install the existing backend requirements in its Python
+   3.12.11 virtual environment if not already installed.
+2. In Render, open the Postgres database and its **Networking** access controls.
+   The Blueprint initially blocks external access (`ipAllowList: []`). Temporarily
+   allow only your current public IP with `/32`; never allow `0.0.0.0/0`.
+3. In the database's **Info/Connections** section, copy its **External Database
+   URL** privately. Set it as `DATABASE_URL` in the local process environment,
+   with TLS (`sslmode=require`). Set `DEMO_MERCHANT_EMAIL` and
+   `DEMO_MERCHANT_PASSWORD` in that same process environment. Use your secret
+   manager or secure prompt; do not save real values in a file or shell history.
+4. From the repository root, run this one command:
 
-4. Expect `Demo merchant seeded.` or
-   `Merchant already exists; password unchanged.` The command reads Render's
-   environment, stores only a salted hash, and does not print the password.
-   Existing real password hashes are not reset by rerunning the command.
-5. If seeding fails, check environment values and migration logs; rerun once corrected.
+```powershell
+.\backend\.venv\Scripts\python.exe scripts/seed_demo_data.py
+```
 
-The seed implementation is inside `backend/app` because Render excludes files
-outside `rootDir`. Do **not** run `python ../scripts/seed_merchant.py` on Render.
-The repository-root wrapper remains available for local development.
-Shell is available on the selected paid web-service plan, not free web services.
-If you change to Free, you will need to return to a Shell-capable plan to use
-these instructions; do not add seeding to every server startup.
+5. Expect `Demo data ready: 3 synthetic transactions added; existing records
+   unchanged.` A repeat reports 0 added. Refresh the frontend transaction list.
+6. Remove your temporary external IP rule in Render and clear the local process
+   environment values. Keep the hosted API on its internal database URL.
 
-## 5. Verify the hosted application
+## 5. When the free database expires
 
-1. Open the static-site URL and sign in using the seeded merchant account.
-2. Confirm the transactions page loads. A new database should show an empty state.
-3. In browser developer tools, confirm API requests go to the API service and
-   carry `Authorization: Bearer ...`. Never copy tokens into issue reports.
-4. Check that an unauthenticated request to `/api/transactions` returns 401.
-5. Complete a payment using a separate Sandbox buyer account and confirm the
-   table shows VERIFIED only after backend capture verification. This is still
-   a pending live checkout acceptance check; deployment preparation did not run it.
-6. Log out, confirm the login screen returns, then test a page reload.
-7. Record the actual public health and frontend URLs in README.md only after
-   confirming them. No URLs are invented in this preparation task.
+Free Postgres expires after **30 days**, has **1 GB** storage, and permits only
+one active free database per workspace. It is not a permanent store for this demo.
+Rebuilding sample data cannot recover expired payment history or evidence.
 
-If login fails with a CORS error, compare the browser's exact origin with
-FRONTEND_ORIGIN. If API calls hit the static site, set VITE_API_URL to the backend
-origin and rebuild the frontend. If PayPal fails to load, verify the frontend
-and backend use the same Sandbox app and rebuild after changing its public ID.
-`sync: false` values added to an existing Blueprint later should be set manually
-in that service's Environment page before redeploying.
+1. In the Blueprint, replace the expired database resource name with a new unique
+   name in both `databases[].name` and the API's `DATABASE_URL.fromDatabase.name`.
+   Keep `plan: free`, region, and all other resource plans unchanged.
+2. Commit/push that configuration and open **Blueprint > Manual Sync**. Review
+   the proposed new database as **Free** before applying. If the expired database
+   blocks creation, remove only that expired database after confirming its data
+   is no longer needed; never delete an active database to bypass the limit.
+3. Wait for the replacement database, then redeploy the API. The Blueprint wires
+   its new internal URL. Startup migrates it and creates the demo merchant from
+   the existing environment settings.
+4. Repeat section 4 against the replacement database to restore synthetic rows.
+   Perform a new Sandbox checkout if you need a genuinely VERIFIED transaction.
 
-## References
+## Free-tier operating limits
 
-- [Render Blueprint specification](https://render.com/docs/blueprint-spec)
-- [Monorepo roots and relative build paths](https://render.com/docs/monorepo-support)
-- [Render Shell access and supported plans](https://render.com/docs/ssh)
-- [Deploy FastAPI](https://render.com/docs/deploy-fastapi)
+The API sleeps after **15 minutes** idle and takes about a minute to wake. Free
+web services have no Shell, SSH, one-off jobs, or persistent disk. All persistent
+application data belongs in Postgres; future evidence belongs in BYTEA, not local
+uploads. The workspace shares **750 free instance hours/month**. Monitor usage
+under **Billing > Monthly Included Usage**; accept suspension instead of upgrading.
+
+Sources: [Render Free limits](https://render.com/docs/free) and
+[Blueprint reference](https://render.com/docs/blueprint-spec). Check the deployment
+review screen before applying; no paid fallback is authorized.

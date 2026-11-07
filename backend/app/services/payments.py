@@ -125,6 +125,8 @@ def capture_order(db: Session, paypal: PayPalClient, merchant_id: int, order_id:
     ).with_for_update())
     if transaction is None:
         fail(404, "order_not_found", "No order with this ID belongs to the current merchant.")
+    if transaction.paypal_order_id.startswith("DEMO-"):
+        raise PaymentError(409, "demo_transaction", "Demo transactions cannot be captured through PayPal.")
     if transaction.status == "VERIFIED":
         return transaction
     try:

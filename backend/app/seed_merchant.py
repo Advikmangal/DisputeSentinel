@@ -1,4 +1,4 @@
-"""Run on Render from backend: python -m app.seed_merchant."""
+"""Insert-only merchant initialization for production startup and local scripts."""
 import sys
 
 from sqlalchemy import select
@@ -11,19 +11,24 @@ from app.services.auth import hash_password
 
 def seed(db: Session, email: str, password: str) -> bool:
     email = email.strip().lower()
-    if "@" not in email or len(email) > 320 or not 12 <= len(password) <= 1024 or password.startswith("replace-"):
+    if "@" not in email or len(email) > 320:
         raise ValueError("Set DEMO_MERCHANT_EMAIL and a DEMO_MERCHANT_PASSWORD of 12–1024 characters.")
     merchant = db.scalar(select(Merchant).where(Merchant.email == email))
     if merchant:
-        # Permit upgrading the disabled T2.2 local merchant, never reset a real hash.
-        if merchant.password_hash.startswith("!login-disabled"):
-            merchant.password_hash = hash_password(password)
-            db.commit()
-            return True
         return False
+    if not 12 <= len(password) <= 1024 or password.startswith("replace-"):
+        raise ValueError("Set DEMO_MERCHANT_PASSWORD to 12–1024 characters.")
     db.add(Merchant(email=email, password_hash=hash_password(password)))
     db.commit()
     return True
+
+
+def seed_on_startup(settings):
+    try:
+        with Session(get_engine()) as db:
+            seed(db, settings.demo_merchant_email, settings.demo_merchant_password.get_secret_value())
+    except Exception:
+        raise RuntimeError("Demo merchant initialization failed; check database and demo merchant environment settings.") from None
 
 
 def main():
