@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import ts from 'typescript'
 
-test('JWT storage, authenticated requests, logout and expired-session handling', async () => {
+for (const base of ['', 'https://api.example.invalid']) {
+test(`API base ${base || 'local proxy'}: JWT storage, logout and expiry`, async () => {
   const storage = new Map()
   globalThis.sessionStorage = {
     getItem: key => storage.get(key) ?? null,
@@ -12,12 +13,12 @@ test('JWT storage, authenticated requests, logout and expired-session handling',
   }
   globalThis.window = new EventTarget()
   const source = await fs.readFile(new URL('../src/api.ts', import.meta.url), 'utf8')
-  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } })
+  const { outputText } = ts.transpileModule(source.replace('import.meta.env.VITE_API_URL', JSON.stringify(base ? base + '/' : '')), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } })
   const { api, getToken, setToken } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
   setToken('synthetic-test-token')
   assert.equal(getToken(), sessionStorage.getItem('payoutsentinel-token'))
   globalThis.fetch = async (path, options) => {
-    assert.equal(path, '/api/transactions')
+    assert.equal(path, `${base}/api/transactions`)
     assert.equal(options.headers.get('Authorization'), 'Bearer synthetic-test-token')
     return Response.json({ items: [] })
   }
@@ -34,3 +35,5 @@ test('JWT storage, authenticated requests, logout and expired-session handling',
   assert.equal(getToken(), null)
   assert.equal(storage.size, 0)
 })
+
+}

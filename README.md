@@ -184,3 +184,16 @@ downgrades to base. It repeats the migration cycle and leaves the database empty
 ## License
 
 MIT; see [LICENSE](LICENSE).
+
+## Render deployment preparation
+
+Use [docs/DEPLOY.md](docs/DEPLOY.md) for the Blueprint setup, exact environment
+values to enter privately, URL wiring, merchant seeding and hosted checks.
+`render.yaml` defines managed Postgres, the API and the static frontend.
+No Render resources or public health URL have been verified yet.
+
+Set `VITE_API_URL` to the backend HTTPS origin for Render builds (no `/api` suffix);
+leave it empty locally to use Vite's proxy. Set `FRONTEND_ORIGIN` to exactly the
+frontend origin, without a trailing slash. In production, startup requires a
+non-placeholder JWT secret of at least 32 characters and an HTTPS frontend origin.
+No new dependencies were added for deployment preparation.

@@ -1,4 +1,5 @@
 let token = sessionStorage.getItem('payoutsentinel-token')
+const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 export const getToken = () => token
 export function setToken(value: string | null) {
   token = value
@@ -10,7 +11,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const headers = new Headers(options.headers)
   if (options.body) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
-  const response = await fetch(path, { ...options, headers })
+  const response = await fetch(`${apiBase}${path}`, { ...options, headers })
   const body = await response.json().catch(() => null)
   if (response.status === 401 && path !== '/api/auth/login' && token === originalToken) {
     setToken(null); window.dispatchEvent(new Event('session-expired'))
