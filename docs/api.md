@@ -1,14 +1,19 @@
 # PayoutSentinel planned API reference
 
-Status: T2.2 implements POST /api/payments/create-order, POST /api/payments/capture, GET /api/transactions and GET /api/transactions/{id}. All other routes remain T1.3 proposed mock contracts. Based on section 6 of PAYOUTSENTINEL_PLAN.md and docs/DIAGRAMS.md. All 17 planned routes below use `/api`. The four payment/transaction DTOs are implemented; remaining shapes are proposals for later tasks, not database schema changes.
+Status: T3.1 implements POST /api/auth/login. T2.2 implements POST /api/payments/create-order, POST /api/payments/capture, GET /api/transactions and GET /api/transactions/{id}. All other routes remain T1.3 proposed mock contracts. Based on section 6 of PAYOUTSENTINEL_PLAN.md and docs/DIAGRAMS.md. All 17 planned routes below use `/api`. The four payment/transaction DTOs are implemented; remaining shapes are proposals for later tasks, not database schema changes.
 
 ## Current T2.2 behavior
 
-The four implemented routes use uppercase `CREATED` and `VERIFIED` statuses. Before
-T3.1, they use an explicitly configured, loopback-only `DEMO_MERCHANT_ID` bridge;
-JWT auth shown below is the planned final contract. With the bridge unset or a
-non-loopback peer they return 503 `auth_not_configured`. Run local Uvicorn with
-`--no-proxy-headers`; do not enable this bridge on a hosted deployment.
+The payment routes use uppercase `CREATED` and `VERIFIED` statuses. Login returns
+an HS256 JWT with `expires_in: 43200` (12 hours). Passwords are stored as salted
+scrypt hashes. All implemented API routes require a valid bearer token except
+login. Missing, invalid or expired tokens return 401 with `WWW-Authenticate:
+Bearer`. Transaction ownership is taken from the signed JWT subject; requests
+for another merchant's transaction return 404. There is no demo-access bypass.
+The future `/api/webhooks/paypal` route is exempt from JWT only, and must implement
+signature verification before processing any event. Authentication error bodies
+currently use FastAPI's string `detail` form; the structured errors below remain
+planned examples where not yet implemented.
 
 Create requires `Idempotency-Key`. Keys are scoped to the configured merchant and
 reserved durably in `audit_log` with a payload fingerprint before calling PayPal.
@@ -92,7 +97,7 @@ Authenticate the demo merchant. Tokens and expiration shown here are illustrativ
 {
   "access_token": "<JWT_PLACEHOLDER>",
   "token_type": "bearer",
-  "expires_in": 3600
+  "expires_in": 43200
 }
 ```
 

@@ -1,10 +1,13 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 
 from app.routers.payments import router as payments_router
 from app.services.payments import PaymentError
+from app.routers.auth import router as auth_router
+from app.services.auth import require_api_auth
 
-app = FastAPI(title="DisputeSentinel")
+app = FastAPI(title="PayoutSentinel", dependencies=[Depends(require_api_auth)])
+app.include_router(auth_router)
 app.include_router(payments_router)
 
 

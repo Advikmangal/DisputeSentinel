@@ -1,8 +1,8 @@
-# DisputeSentinel
+# PayoutSentinel
 
 PayPal Sandbox payment evidence and dispute management for digital-service merchants.
 Implemented: the scaffold, PayPal Sandbox REST service, T2.1 database models and
-migration, and T2.2 payment/transaction endpoints. The frontend remains a placeholder.
+migration, T2.2 payment/transaction endpoints, T3.1 JWT login and T2.3 Payments UI.
 The source-of-truth implementation plan is [PAYOUTSENTINEL_PLAN.md](PAYOUTSENTINEL_PLAN.md),
 with architecture in [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
 
@@ -40,8 +40,9 @@ npm run dev
 ```
 
 Open the URL printed by Vite (normally http://localhost:5173).
-The four navigation items are disabled placeholders. No frontend/backend integration
-is implemented yet, and no credentials belong in frontend environment variables.
+The frontend opens a merchant login page, then Payments. Vite proxies `/api` to
+`http://127.0.0.1:8000`. Only the public Sandbox app client ID belongs in a VITE_
+variable; never expose PayPal secrets, JWT secrets, passwords or database URLs.
 
 Production build check:
 
@@ -115,23 +116,47 @@ and their data. `alembic check` verifies that models match the migrated schema.
 Evidence bytes compile to PostgreSQL BYTEA; JSON fields and all planned unique
 PayPal-ID constraints are included. No actual evidence/upload API is built yet.
 
-JWT authentication is scheduled for T3.1. Payment routes currently return 503 unless
-`DEMO_MERCHANT_ID` is explicitly set to an existing merchant and the connection
-is from loopback. For local development, create a non-login merchant in your local
-database with this SQL and use the returned ID:
+## Login and Payments (T3.1 / T2.3)
 
-```sql
-INSERT INTO merchants (email, password_hash)
-VALUES ('merchant@example.invalid', '!login-disabled-until-T3.1')
-RETURNING id;
+Added dependency: PyJWT for HS256 JWTs. Passwords use Python's built-in scrypt
+with a random per-password salt and constant-time comparison. Tokens expire in
+12 hours (43200 seconds). Every implemented `/api` endpoint requires a bearer
+token except login; the future exact webhook path is exempt from JWT and will
+require PayPal signature verification. Health remains public. The former demo
+access flag and bypass code have been removed.
+
+Configure these privately through environment variables or your ignored root `.env`:
+
+- `DATABASE_URL`: your migrated PostgreSQL database.
+- `JWT_SECRET`: random secret of at least 32 bytes; no fallback is provided.
+- `DEMO_MERCHANT_EMAIL` and `DEMO_MERCHANT_PASSWORD`: demo login to seed; password
+  must have 12–1024 characters and has no default.
+- `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET`: the Sandbox REST app.
+- `VITE_PAYPAL_CLIENT_ID`: the public client ID of the **same Sandbox app**.
+
+Vite reads the root env file and exposes only `VITE_` variables to browser code.
+Restart Vite after changing the public client ID. Do not commit any real values.
+From the repository root, after applying migrations:
+
+```powershell
+.\backend\.venv\Scripts\python.exe scripts/seed_merchant.py
 ```
 
-`password_hash` here is a disabled marker, not a password or usable login hash.
-Set `DEMO_MERCHANT_ID` to that ID in your terminal environment, then run Uvicorn
-bound to `127.0.0.1` with `--no-proxy-headers`. This bridge is not authentication;
-leave it unset on hosted deployments and replace it with JWT in T3.1.
+Seeding creates a merchant or upgrades the disabled T2.2 marker. An existing real
+password hash is left unchanged; rerunning the script does not reset passwords.
+Start the backend and frontend using the commands above. Sign in, enter a USD
+amount, choose Continue to PayPal, then use the SDK's PayPal button to approve
+with a Sandbox **buyer** account distinct from the merchant account. The backend
+creates and verifies captures; the browser never captures directly through PayPal.
+A VERIFIED badge appears only for backend-verified transactions. Capture failures
+show an error and allow verification retries against the same order. Refresh and
+View open the current merchant's transaction list/detail.
 
-The four implemented endpoints are listed in [docs/api.md](docs/api.md).
+The JWT lives in memory and sessionStorage, is attached to every API request, and
+is cleared on logout or an API 401. Logout also removes the Payments view and
+merchant data from the screen. No Evidence Vault or deployment is included.
+
+The implemented endpoints are listed in [docs/api.md](docs/api.md).
 Create requires `Idempotency-Key` (1–38 letters, digits, underscores or hyphens).
 Use the same key and payload for retries. It reserves the key/payload in the
 existing audit table before contacting PayPal, and retains the resulting local

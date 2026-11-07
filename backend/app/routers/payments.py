@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,16 +10,9 @@ from app.models import Transaction
 from app.schemas.payments import CaptureOrder, CreatedOrderOut, CreateOrder, TransactionOut, TransactionsOut
 from app.services import payments
 from app.services.paypal import PayPalClient
+from app.services.auth import get_merchant_id
 
 router = APIRouter(prefix="/api", tags=["payments"])
-
-
-def get_merchant_id(request: Request) -> int:
-    """Temporary local-only bridge; replace with JWT dependency in T3.1."""
-    merchant_id = get_settings().demo_merchant_id
-    if merchant_id is None or merchant_id < 1 or not request.client or request.client.host not in ("127.0.0.1", "::1"):
-        raise HTTPException(503, detail={"code": "auth_not_configured", "message": "Payment routes require local demo configuration until JWT auth is implemented."})
-    return merchant_id
 
 
 def get_paypal():

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
+import secrets
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -8,23 +9,28 @@ from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.config import Settings
+from app.config import Settings, get_settings
 from app.db import Base, get_db
 from app.main import app
 from app.models import AuditLog, Merchant, Transaction
-from app.routers.payments import get_merchant_id, get_paypal
+from app.routers.payments import get_paypal
+from app.services.auth import hash_password
 from app.services.paypal import PayPalClient
 
 
 @pytest.fixture
-def api():
+def api(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", secrets.token_hex(32))
+    get_settings.cache_clear()
+    password = secrets.token_urlsafe(20)
+    password_hash = hash_password(password)
     """SQLite is only an isolated unit-test store; production uses PostgreSQL."""
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     event.listen(engine, "connect", lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     with Session(engine) as db:
-        db.add_all([Merchant(id=1, email="one@example.invalid", password_hash="disabled"),
-                    Merchant(id=2, email="two@example.invalid", password_hash="disabled")])
+        db.add_all([Merchant(id=1, email="one@example.invalid", password_hash=password_hash),
+                    Merchant(id=2, email="two@example.invalid", password_hash=password_hash)])
         db.commit()
     state = {"status": "APPROVED", "calls": [], "order_amount": "1.00", "capture_amount": "1.00",
              "currency": "USD", "create_status": 201, "capture_status": 201,
@@ -65,11 +71,15 @@ def api():
             yield db
 
     app.dependency_overrides[get_db] = database
-    app.dependency_overrides[get_merchant_id] = lambda: 1
     app.dependency_overrides[get_paypal] = lambda: paypal
     with TestClient(app) as client:
+        state["password"] = password
+        login = client.post("/api/auth/login", json={"email": "one@example.invalid", "password": password})
+        assert login.status_code == 200
+        client.headers["Authorization"] = "Bearer " + login.json()["access_token"]
         yield client, state, engine
     app.dependency_overrides.clear()
+    get_settings.cache_clear()
     paypal.close()
     engine.dispose()
 
@@ -229,9 +239,9 @@ def test_client_cannot_assert_success_or_amount(api):
     assert create(client, amount="0").status_code == 422
 
 
-def test_routes_fail_closed_without_auth_bridge(api):
+def test_routes_reject_missing_token(api):
     client, state, _ = api
-    del app.dependency_overrides[get_merchant_id]
+    del client.headers["Authorization"]
     response = client.get("/api/transactions")
-    assert response.status_code == 503
+    assert response.status_code == 401
     assert not state["calls"]
