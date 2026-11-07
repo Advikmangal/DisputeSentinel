@@ -23,7 +23,7 @@
           "paypal_capture_id": "SANDBOX-CAPTURE-EXAMPLE",
           "amount": "1.00",
           "currency": "USD",
-          "status": "verified",
+          "status": "VERIFIED",
           "payer_email": "buyer@example.invalid",
           "description": "Simulated digital-service delivery",
           "created_at": "2026-11-03T10:00:00Z",

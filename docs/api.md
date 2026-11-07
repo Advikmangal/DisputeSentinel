@@ -1,6 +1,34 @@
 # PayoutSentinel planned API reference
 
-Status: T1.3 mock contracts, not implemented HTTP routes. Based on section 6 of PAYOUTSENTINEL_PLAN.md and docs/DIAGRAMS.md. All 17 planned routes below use `/api`. Request/response DTOs, error envelopes and status codes are proposals for later tasks, not database schema changes.
+Status: T2.2 implements POST /api/payments/create-order, POST /api/payments/capture, GET /api/transactions and GET /api/transactions/{id}. All other routes remain T1.3 proposed mock contracts. Based on section 6 of PAYOUTSENTINEL_PLAN.md and docs/DIAGRAMS.md. All 17 planned routes below use `/api`. The four payment/transaction DTOs are implemented; remaining shapes are proposals for later tasks, not database schema changes.
+
+## Current T2.2 behavior
+
+The four implemented routes use uppercase `CREATED` and `VERIFIED` statuses. Before
+T3.1, they use an explicitly configured, loopback-only `DEMO_MERCHANT_ID` bridge;
+JWT auth shown below is the planned final contract. With the bridge unset or a
+non-loopback peer they return 503 `auth_not_configured`. Run local Uvicorn with
+`--no-proxy-headers`; do not enable this bridge on a hosted deployment.
+
+Create requires `Idempotency-Key`. Keys are scoped to the configured merchant and
+reserved durably in `audit_log` with a payload fingerprint before calling PayPal.
+A matching completed retry returns the same transaction (201); changed payloads
+return 409 `idempotency_conflict`. An unfinished reservation older than five hours
+returns 409 `reconciliation_required`. Both create and capture send stable PayPal
+request IDs. Database row locks serialize concurrent operations.
+
+Capture accepts only `order_id`; extra client status/amount/success fields are
+rejected. A successful capture is followed by a separate PayPal order fetch.
+Order ID, intent, order/capture completion, order/capture amounts and currencies
+must match the stored transaction. Duplicate verified capture returns 200 with
+the existing record and no PayPal call. Unknown local order is 404; PayPal state
+conflict (including unapproved order) or verification mismatch is 409; upstream
+failures, timeouts and malformed data are sanitized 502 responses. These are the
+implemented codes; 504 below remains a future proposed timeout distinction.
+FastAPI validation currently retains its standard 422 `detail` list; domain
+errors use the structured code/message envelope shown below. JSON timestamps
+are normalized to UTC. Missing database setup is an operational configuration
+error; apply migrations before using the payment routes.
 
 ## Shared conventions
 
@@ -10,7 +38,7 @@ Status: T1.3 mock contracts, not implemented HTTP routes. Based on section 6 of 
 - Amounts are decimal strings with explicit currency; timestamps use UTC ISO 8601. No raw PDF bytes, storage paths, credentials, or real IDs are exposed.
 - Every sample is synthetic unless explicitly labeled as a redacted observed subset. All simulated disputes include `is_fixture: true`; render them as **Simulated**, including nested draft/approval/export views.
 - Generic errors use `{"detail":{"code":"...","message":"..."}}` in this proposed contract. Framework validation errors will need normalization during implementation. Error messages must not include credentials or raw upstream bodies. Unexpected internal failures return a sanitized 500.
-- The create-order `Idempotency-Key` is a proposed application header mapped to PayPal request IDs. Capture and webhook processing require unique stored PayPal IDs and safe replays. Application idempotency persistence is a later implementation decision, not a new table in this task.
+- The create-order `Idempotency-Key` is a proposed application header mapped to PayPal request IDs. Capture and webhook processing require unique stored PayPal IDs and safe replays. Application idempotency reservations now use the existing audit_log table; no extra table was introduced.
 - The fixture score uses illustrative equal weights; finalize deterministic checklist weights in T3.4/T4.3. No extraction or scoring ran to generate these examples.
 - Approval/edit/export behaviors here preserve merchant approval and the lifecycle in the diagrams. Actual submission remains conditional Sandbox functionality.
 
@@ -107,7 +135,7 @@ Create a CAPTURE-intent Sandbox order and persist its ID. The approval URL shape
     "paypal_capture_id": null,
     "amount": "1.00",
     "currency": "USD",
-    "status": "created",
+    "status": "CREATED",
     "payer_email": null,
     "description": "Simulated digital-service delivery",
     "created_at": "2026-11-03T10:00:00Z",
@@ -153,7 +181,7 @@ Capture a merchant-owned order; fetch from PayPal and compare stored amount/curr
   "paypal_capture_id": "SANDBOX-CAPTURE-EXAMPLE",
   "amount": "1.00",
   "currency": "USD",
-  "status": "verified",
+  "status": "VERIFIED",
   "payer_email": "buyer@example.invalid",
   "description": "Simulated digital-service delivery",
   "created_at": "2026-11-03T10:00:00Z",
@@ -196,7 +224,7 @@ null
       "paypal_capture_id": "SANDBOX-CAPTURE-EXAMPLE",
       "amount": "1.00",
       "currency": "USD",
-      "status": "verified",
+      "status": "VERIFIED",
       "payer_email": "buyer@example.invalid",
       "description": "Simulated digital-service delivery",
       "created_at": "2026-11-03T10:00:00Z",
@@ -239,7 +267,7 @@ null
   "paypal_capture_id": "SANDBOX-CAPTURE-EXAMPLE",
   "amount": "1.00",
   "currency": "USD",
-  "status": "verified",
+  "status": "VERIFIED",
   "payer_email": "buyer@example.invalid",
   "description": "Simulated digital-service delivery",
   "created_at": "2026-11-03T10:00:00Z",

@@ -1,0 +1,60 @@
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.config import get_settings
+from app.db import get_db
+from app.models import Transaction
+from app.schemas.payments import CaptureOrder, CreatedOrderOut, CreateOrder, TransactionOut, TransactionsOut
+from app.services import payments
+from app.services.paypal import PayPalClient
+
+router = APIRouter(prefix="/api", tags=["payments"])
+
+
+def get_merchant_id(request: Request) -> int:
+    """Temporary local-only bridge; replace with JWT dependency in T3.1."""
+    merchant_id = get_settings().demo_merchant_id
+    if merchant_id is None or merchant_id < 1 or not request.client or request.client.host not in ("127.0.0.1", "::1"):
+        raise HTTPException(503, detail={"code": "auth_not_configured", "message": "Payment routes require local demo configuration until JWT auth is implemented."})
+    return merchant_id
+
+
+def get_paypal():
+    try:
+        client = PayPalClient(get_settings())
+    except ValueError:
+        raise HTTPException(503, detail={"code": "paypal_not_configured", "message": "Configure PayPal Sandbox credentials."}) from None
+    with client:
+        yield client
+
+
+DB = Annotated[Session, Depends(get_db)]
+MerchantID = Annotated[int, Depends(get_merchant_id)]
+PayPal = Annotated[PayPalClient, Depends(get_paypal)]
+
+
+@router.post("/payments/create-order", response_model=CreatedOrderOut, status_code=201)
+def create_order(body: CreateOrder, merchant_id: MerchantID, db: DB, paypal: PayPal,
+                 idempotency_key: Annotated[str, Header(pattern=r"^[A-Za-z0-9_-]{1,38}$")]):
+    return payments.create_order(db, paypal, merchant_id, body, idempotency_key)
+
+
+@router.post("/payments/capture", response_model=TransactionOut)
+def capture_order(body: CaptureOrder, merchant_id: MerchantID, db: DB, paypal: PayPal):
+    return payments.capture_order(db, paypal, merchant_id, body.order_id)
+
+
+@router.get("/transactions", response_model=TransactionsOut)
+def list_transactions(merchant_id: MerchantID, db: DB):
+    return {"items": db.scalars(select(Transaction).where(Transaction.merchant_id == merchant_id).order_by(Transaction.id)).all()}
+
+
+@router.get("/transactions/{id}", response_model=TransactionOut)
+def transaction_detail(merchant_id: MerchantID, db: DB, id: Annotated[int, Path(gt=0)]):
+    transaction = db.scalar(select(Transaction).where(Transaction.id == id, Transaction.merchant_id == merchant_id))
+    if transaction is None:
+        raise HTTPException(404, detail={"code": "transaction_not_found", "message": "Transaction not found."})
+    return transaction

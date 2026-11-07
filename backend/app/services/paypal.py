@@ -1,7 +1,7 @@
 """Sandbox REST client. Returned payment data is not a verified DB transaction.
 
-T2.2 must compare server-fetched amounts/currency against the stored transaction
-and persist order/capture IDs with the unique constraints defined in T2.1.
+services/payments.py compares server-fetched amounts/currency against the stored
+transaction and persists order/capture IDs under database unique constraints.
 """
 
 import re
@@ -139,8 +139,8 @@ class PayPalClient:
     def capture_order(self, order_id: str) -> dict[str, Any]:
         """Fetch first; completed orders are no-ops. Replays use a stable key.
 
-        This returns raw PayPal data. The caller must verify amount/currency and
-        completed capture status before recording a payment as verified (T2.2).
+        This returns raw PayPal data. The payment service verifies amount/currency
+        and completed capture status before recording a payment as verified.
         """
         order = self.get_order(order_id)
         if order.get("status") == "COMPLETED":

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     dispute_source: Literal["fixture", "paypal"] = "fixture"
     upload_dir: Path = Path("uploads")
     frontend_origin: str = "http://localhost:5173"
+    # Local-only bridge until T3.1 replaces it with JWT merchant authentication.
+    demo_merchant_id: int | None = None
 
 
 @lru_cache

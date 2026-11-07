@@ -1,7 +1,8 @@
 # DisputeSentinel
 
 PayPal Sandbox payment evidence and dispute management for digital-service merchants.
-Implemented: the T1.1 scaffold and the T1.2 PayPal Sandbox REST service.
+Implemented: the scaffold, PayPal Sandbox REST service, T2.1 database models and
+migration, and T2.2 payment/transaction endpoints. The frontend remains a placeholder.
 The source-of-truth implementation plan is [PAYOUTSENTINEL_PLAN.md](PAYOUTSENTINEL_PLAN.md),
 with architecture in [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
 
@@ -39,8 +40,8 @@ npm run dev
 ```
 
 Open the URL printed by Vite (normally http://localhost:5173).
-The four navigation items are disabled placeholders. No backend integration is
-implemented yet, and no credentials belong in frontend environment variables.
+The four navigation items are disabled placeholders. No frontend/backend integration
+is implemented yet, and no credentials belong in frontend environment variables.
 
 Production build check:
 
@@ -77,9 +78,9 @@ thread when async routes are introduced.
 
 Creation requires a caller-supplied idempotency key. Capture derives a stable key
 from the order ID and returns an already completed order without another capture.
-The service returns raw PayPal data: database uniqueness constraints (T2.1), and
-server-side amount/currency/capture verification before persisting a verified
-transaction (T2.2), are still required. No payment endpoints are exposed yet.
+The PayPal REST client returns raw data. The payment service now verifies a fresh
+order fetch after capture and persists a VERIFIED transaction only when the order
+and capture IDs, completed statuses, amounts and currencies agree with stored data.
 
 Tests use `httpx.MockTransport`; external network connections are blocked during
 unit tests. Gemini is not invoked by T1.2. Run tests from `backend`:
@@ -92,6 +93,68 @@ API references: [OAuth](https://developer.paypal.com/api/rest/authentication),
 [Orders](https://developer.paypal.com/api/orders/v2),
 [Disputes](https://developer.paypal.com/api/customer-disputes/v1), and
 [idempotency](https://developer.paypal.com/api/rest/reference/idempotency/).
+
+## T2.1 / T2.2 database and payments
+
+Dependencies added for these tasks: SQLAlchemy 2.x and Alembic (both planned),
+plus the required PostgreSQL driver `psycopg[binary]`. No database or credentials
+are bundled. Set `DATABASE_URL` in the private root `.env` or environment.
+`postgresql://` and `postgresql+psycopg://` URLs are accepted; the backend uses
+psycopg 3. The application does not create tables automatically.
+
+From `backend`, install requirements and migrate your development database:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+On a disposable database only, reverse the initial migration using
+`.\.venv\Scripts\python.exe -m alembic downgrade base`; it removes all nine tables
+and their data. `alembic check` verifies that models match the migrated schema.
+Evidence bytes compile to PostgreSQL BYTEA; JSON fields and all planned unique
+PayPal-ID constraints are included. No actual evidence/upload API is built yet.
+
+JWT authentication is scheduled for T3.1. Payment routes currently return 503 unless
+`DEMO_MERCHANT_ID` is explicitly set to an existing merchant and the connection
+is from loopback. For local development, create a non-login merchant in your local
+database with this SQL and use the returned ID:
+
+```sql
+INSERT INTO merchants (email, password_hash)
+VALUES ('merchant@example.invalid', '!login-disabled-until-T3.1')
+RETURNING id;
+```
+
+`password_hash` here is a disabled marker, not a password or usable login hash.
+Set `DEMO_MERCHANT_ID` to that ID in your terminal environment, then run Uvicorn
+bound to `127.0.0.1` with `--no-proxy-headers`. This bridge is not authentication;
+leave it unset on hosted deployments and replace it with JWT in T3.1.
+
+The four implemented endpoints are listed in [docs/api.md](docs/api.md).
+Create requires `Idempotency-Key` (1–38 letters, digits, underscores or hyphens).
+Use the same key and payload for retries. It reserves the key/payload in the
+existing audit table before contacting PayPal, and retains the resulting local
+transaction/approval URL for replay. Unfinished requests older than five hours
+require reconciliation instead of risking a second remote order after PayPal's
+idempotency retention expires. Merchant-row locks serialize creates; transaction-row
+locks serialize captures across backend processes. Keep network calls bounded by
+the PayPal client's timeout. Capture errors leave the local order CREATED so a
+retry can reconcile a capture that may already have succeeded remotely.
+
+Unit tests use in-memory SQLite only for isolation and mock PayPal HTTP with
+`httpx.MockTransport`; they do not contact Postgres, PayPal or Gemini. PostgreSQL
+migration and concurrency acceptance is a separate check. Set `TEST_DATABASE_URL`
+in the environment to a **fresh disposable PostgreSQL database**, then run from
+the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe scripts/check_postgres.py
+```
+
+The check refuses an existing schema, upgrades, verifies all tables/constraints
+and BYTEA storage, exercises concurrent creation/capture with mocked PayPal, then
+downgrades to base. It repeats the migration cycle and leaves the database empty.
 
 ## License
 
