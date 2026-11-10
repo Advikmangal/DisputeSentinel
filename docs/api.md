@@ -1,5 +1,8 @@
 # PayoutSentinel planned API reference
 
+> Updated implementation and deployment instructions: [RECOVERY_AND_EVIDENCE.md](RECOVERY_AND_EVIDENCE.md). This update supersedes the scaffold-only status and build-time PayPal configuration below.
+
+
 Status: T3.1 implements POST /api/auth/login. T2.2 implements POST /api/payments/create-order, POST /api/payments/capture, GET /api/transactions and GET /api/transactions/{id}. All other routes remain T1.3 proposed mock contracts. Based on section 6 of PAYOUTSENTINEL_PLAN.md and docs/DIAGRAMS.md. All 17 planned routes below use `/api`. The four payment/transaction DTOs are implemented; remaining shapes are proposals for later tasks, not database schema changes.
 
 ## Current T2.2 behavior
@@ -1044,3 +1047,4 @@ Transaction responses also include `is_demo` (boolean), derived from the reserve
 creates only `CREATED` synthetic rows, never verified payments. Capture of a demo
 order returns HTTP 409 with `detail.code` = `demo_transaction`; it makes no PayPal
 request. Ordinary PayPal orders have `is_demo: false`.
+

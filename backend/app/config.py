@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     database_url: SecretStr = SecretStr("")
     jwt_secret: SecretStr = SecretStr("")
     paypal_webhook_id: str = ""
-    gemini_model: str = ""
+    gemini_model: str = "gemini-3.5-flash-lite"
     # T1.4 is partial; revisit after a captured Sandbox payment (docs/DECISIONS.md).
     dispute_source: Literal["fixture", "paypal"] = "fixture"
     upload_dir: Path = Path("uploads")
@@ -53,3 +53,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+

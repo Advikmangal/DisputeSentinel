@@ -1,5 +1,8 @@
 # PayoutSentinel
 
+> Updated implementation and deployment instructions: [RECOVERY_AND_EVIDENCE.md](docs/RECOVERY_AND_EVIDENCE.md). This update supersedes the scaffold-only status and build-time PayPal configuration below.
+
+
 PayPal Sandbox payment evidence and dispute management for digital-service merchants.
 Implemented: the scaffold, PayPal Sandbox REST service, T2.1 database models and
 migration, T2.2 payment/transaction endpoints, T3.1 JWT login and T2.3 Payments UI.
@@ -202,3 +205,4 @@ leave it empty locally to use Vite's proxy. Set `FRONTEND_ORIGIN` to exactly the
 frontend origin, without a trailing slash. In production, startup requires a
 non-placeholder JWT secret of at least 32 characters and an HTTPS frontend origin.
 No new dependencies were added for deployment preparation.
+

@@ -15,7 +15,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
+    healthCheckPath: /ready
     numInstances: 1
     envVars:
       - key: PYTHON_VERSION
@@ -57,9 +57,8 @@ services:
         value: 24.13.0
       - key: VITE_API_URL
         sync: false
-      - key: VITE_PAYPAL_CLIENT_ID
-        sync: false
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+

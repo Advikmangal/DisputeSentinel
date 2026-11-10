@@ -15,6 +15,15 @@ from app.services.auth import get_merchant_id
 router = APIRouter(prefix="/api", tags=["payments"])
 
 
+@router.get("/payments/config")
+def payment_config(merchant_id: Annotated[int, Depends(get_merchant_id)]):
+    settings = get_settings()
+    client_id = settings.paypal_client_id
+    if not client_id or client_id.startswith("replace-"):
+        raise HTTPException(503, "PayPal Sandbox client ID is not configured on the server.")
+    return {"client_id": client_id, "currency": "USD", "environment": "sandbox"}
+
+
 def get_paypal():
     try:
         client = PayPalClient(get_settings())
@@ -51,3 +60,4 @@ def transaction_detail(merchant_id: MerchantID, db: DB, id: Annotated[int, Path(
     if transaction is None:
         raise HTTPException(404, detail={"code": "transaction_not_found", "message": "Transaction not found."})
     return transaction
+

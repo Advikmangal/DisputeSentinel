@@ -1,5 +1,8 @@
 # Deploy on Render Free only
 
+> Updated implementation and deployment instructions: [RECOVERY_AND_EVIDENCE.md](RECOVERY_AND_EVIDENCE.md). This update supersedes the scaffold-only status and build-time PayPal configuration below.
+
+
 This is deployment preparation; no hosted deployment has been verified. All three
 resources in `render.yaml` are free: the database and API declare `plan: free`;
 the static site is inherently free and does not support a `plan` field. There is no disk, pre-deploy
@@ -149,3 +152,4 @@ under **Billing > Monthly Included Usage**; accept suspension instead of upgradi
 Sources: [Render Free limits](https://render.com/docs/free) and
 [Blueprint reference](https://render.com/docs/blueprint-spec). Check the deployment
 review screen before applying; no paid fallback is authorized.
+

@@ -12,7 +12,7 @@ async function ensureServerAwake() {
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 10000)
         try {
-          const response = await fetch(`${apiBase}/health`, { signal: controller.signal, cache: 'no-store' })
+          const response = await fetch(`${apiBase}/ready`, { signal: controller.signal, cache: 'no-store' })
           if (response.ok && (await response.json()).status === 'ok') {
             readyUntil = Date.now() + 10 * 60 * 1000
             return
@@ -42,10 +42,26 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   await ensureServerAwake()
   if (token !== originalToken) throw new Error('Session changed. Please sign in again.')
   const headers = new Headers(options.headers)
-  if (options.body) headers.set('Content-Type', 'application/json')
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
-  const response = await fetch(`${apiBase}${path}`, { ...options, headers })
-  const body = await response.json().catch(() => null)
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  options.signal?.addEventListener('abort', abort, { once: true })
+  if (options.signal?.aborted) abort()
+  const timer = setTimeout(abort, 90000)
+  let response: Response
+  let body: any
+  try {
+    response = await fetch(`${apiBase}${path}`, { ...options, headers, signal: controller.signal })
+    body = await response.json().catch(error => { if (controller.signal.aborted) throw error; return null })
+  } catch (error) {
+    readyUntil = 0
+    if (controller.signal.aborted) throw new Error('Request timed out or was canceled. Payment status may still be pending. Retry verification for the same order; do not create a replacement payment.')
+    throw error
+  } finally {
+    clearTimeout(timer)
+    options.signal?.removeEventListener('abort', abort)
+  }
   if (response.status === 401 && path !== '/api/auth/login' && token === originalToken) {
     setToken(null); window.dispatchEvent(new Event('session-expired'))
   }
@@ -54,3 +70,4 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return body as T
 }
 export type Transaction = { is_demo: boolean; id: number; paypal_order_id: string; paypal_capture_id: string | null; amount: string; currency: string; status: string; payer_email: string | null; description: string; created_at: string; captured_at: string | null }
+

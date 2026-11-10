@@ -119,7 +119,7 @@ def matches(value, amount: Decimal, currency: str) -> bool:
         return False
 
 
-def capture_order(db: Session, paypal: PayPalClient, merchant_id: int, order_id: str):
+def capture_order(db: Session, paypal: PayPalClient, merchant_id: int, order_id: str, *, reconcile_only=False, commit=True):
     transaction = db.scalar(select(Transaction).where(
         Transaction.merchant_id == merchant_id, Transaction.paypal_order_id == order_id,
     ).with_for_update())
@@ -130,7 +130,8 @@ def capture_order(db: Session, paypal: PayPalClient, merchant_id: int, order_id:
     if transaction.status == "VERIFIED":
         return transaction
     try:
-        paypal.capture_order(order_id)
+        if not reconcile_only:
+            paypal.capture_order(order_id)
         order = paypal.get_order(order_id)  # never trust the capture response/browser
     except PayPalError as error:
         upstream(error)
@@ -162,8 +163,12 @@ def capture_order(db: Session, paypal: PayPalClient, merchant_id: int, order_id:
     transaction.captured_at = captured_at
     transaction.payer_email = payer_email
     try:
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
     except IntegrityError:
         db.rollback()
         fail(409, "capture_conflict", "This PayPal capture is already associated with a transaction.")
     return transaction
+

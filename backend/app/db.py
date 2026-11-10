@@ -31,9 +31,11 @@ def database_url():
 
 @lru_cache
 def get_engine():
-    return create_engine(database_url(), pool_pre_ping=True, hide_parameters=True)
+    return create_engine(database_url(), pool_pre_ping=True, hide_parameters=True,
+                         pool_timeout=5, connect_args={"connect_timeout": 5, "options": "-c statement_timeout=15000"})
 
 
 def get_db():
     with Session(get_engine(), expire_on_commit=False) as session:
         yield session
+

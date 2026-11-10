@@ -18,7 +18,7 @@ test(`API base ${base || 'local proxy'}: JWT storage, logout and expiry`, async 
   setToken('synthetic-test-token')
   assert.equal(getToken(), sessionStorage.getItem('payoutsentinel-token'))
   globalThis.fetch = async (path, options) => {
-    if (path === `${base}/health`) return Response.json({ status: 'ok' })
+    if (path === `${base}/ready`) return Response.json({ status: 'ok' })
     assert.equal(path, `${base}/api/transactions`)
     assert.equal(options.headers.get('Authorization'), 'Bearer synthetic-test-token')
     return Response.json({ items: [] })
@@ -51,7 +51,7 @@ test('cold start retries health only, shares probe, and sends each requested ope
   window.addEventListener('server-waking', () => waking++)
   window.addEventListener('server-ready', () => ready++)
   globalThis.fetch = async (path, options) => {
-    if (path === '/health') {
+    if (path === '/ready') {
       healthCalls++
       if (healthCalls === 1) throw new TypeError('Temporarily unavailable')
       if (healthCalls === 2) return new Response('Starting', { status: 503 })
@@ -78,9 +78,28 @@ test('unavailable backend stops after bounded health retries; explicit retry rec
   const { outputText } = ts.transpileModule(source.replace('import.meta.env.VITE_API_URL', "''"), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } })
   const { api } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}#unavailable`)
   let attempts = 0
-  globalThis.fetch = async path => { assert.equal(path, '/health'); attempts++; return new Response('Starting', { status: 503 }) }
+  globalThis.fetch = async path => { assert.equal(path, '/ready'); attempts++; return new Response('Starting', { status: 503 }) }
   await assert.rejects(api('/api/auth/login', { method: 'POST' }), /still unavailable/)
   assert.equal(attempts, 8)
-  globalThis.fetch = async path => Response.json(path === '/health' ? { status: 'ok' } : { access_token: 'synthetic' })
+  globalThis.fetch = async path => Response.json(path === '/ready' ? { status: 'ok' } : { access_token: 'synthetic' })
   assert.deepEqual(await api('/api/auth/login', { method: 'POST' }), { access_token: 'synthetic' })
+})
+
+
+test('actual API request times out without replaying a mutation', async t => {
+  globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} }
+  globalThis.window = new EventTarget()
+  const realTimeout = globalThis.setTimeout
+  t.mock.method(globalThis, 'setTimeout', (fn, ms, ...args) => realTimeout(fn, Math.min(ms, 10), ...args))
+  const source = await fs.readFile(new URL('../src/api.ts', import.meta.url), 'utf8')
+  const { outputText } = ts.transpileModule(source.replace('import.meta.env.VITE_API_URL', "''"), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } })
+  const { api } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}#request-timeout`)
+  let posts = 0
+  globalThis.fetch = async (path, options) => {
+    if (path === '/ready') return Response.json({ status: 'ok' })
+    posts++
+    return new Promise((resolve, reject) => options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))))
+  }
+  await assert.rejects(api('/api/payments/capture', { method: 'POST' }), /same order/)
+  assert.equal(posts, 1)
 })

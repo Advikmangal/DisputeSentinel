@@ -1,3 +1,4 @@
+import { api } from './api'
 type Buttons = { render: (element: HTMLElement) => Promise<void>; close: () => Promise<void> }
 export type PayPal = { Buttons: (options: {
   style: { label: string }; createOrder: () => Promise<string>
@@ -6,11 +7,12 @@ export type PayPal = { Buttons: (options: {
 }) => Buttons }
 declare global { interface Window { paypal?: PayPal } }
 let loading: Promise<PayPal> | null = null
-export function loadPayPal(): Promise<PayPal> {
+export async function loadPayPal(): Promise<PayPal> {
   if (window.paypal) return Promise.resolve(window.paypal)
   if (loading) return loading
-  const id = import.meta.env.VITE_PAYPAL_CLIENT_ID
-  if (!id || id.startsWith('replace-')) return Promise.reject(new Error('Set VITE_PAYPAL_CLIENT_ID to your Sandbox app client ID and restart Vite.'))
+  const { client_id: id } = await api<{ client_id: string }>('/api/payments/config')
+  if (loading) return loading
+  if (!id) throw new Error('PayPal is not configured on the server.')
   loading = new Promise((resolve, reject) => {
     const script = document.createElement('script')
     script.src = `https://www.sandbox.paypal.com/sdk/js?client-id=${encodeURIComponent(id)}&currency=USD&intent=capture&components=buttons`
@@ -23,3 +25,4 @@ export function loadPayPal(): Promise<PayPal> {
   })
   return loading
 }
+
