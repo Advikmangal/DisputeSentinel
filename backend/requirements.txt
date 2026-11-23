@@ -7,6 +7,4 @@ SQLAlchemy>=2.0,<2.1
 alembic>=1.16,<2
 psycopg[binary]>=3.2,<4
 PyJWT>=2.10,<3
-
-python-multipart>=0.0.20,<1
 pypdf>=6,<7

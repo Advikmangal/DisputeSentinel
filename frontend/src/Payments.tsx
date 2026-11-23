@@ -3,8 +3,6 @@ import type { FormEvent } from 'react'
 import { api, getToken } from './api'
 import type { Transaction } from './api'
 import { loadPayPal } from './paypal'
-import Evidence from './Evidence'
-import Disputes from './Disputes'
 const message = (e: unknown) => e instanceof Error ? e.message : 'Something went wrong.'
 type Checkout = { amount: string; description: string; key: string }
 function CheckoutButton({ checkout, onVerified }: { checkout: Checkout; onVerified: () => void }) {
@@ -90,6 +88,13 @@ export default function Payments() {
     event.preventDefault()
     setCheckout({ amount: Number(amount).toFixed(2), description, key: crypto.randomUUID() })
   }
+  async function openDetail(id: number) {
+    const request = ++detailRequest.current
+    setDetailLoading(true); setDetail(null); setError('')
+    try { const data = await api<Transaction>(`/api/transactions/${id}`); if (request === detailRequest.current) setDetail(data) }
+    catch (e) { if (request === detailRequest.current) setError(message(e)) }
+    finally { if (request === detailRequest.current) setDetailLoading(false) }
+  }
   async function recover(tx: Transaction) {
     setRecovering(tx.id); setError('')
     try {
@@ -98,15 +103,9 @@ export default function Payments() {
     } catch (e) { setError(message(e)) }
     finally { setRecovering(null) }
   }
-  async function openDetail(id: number) {
-    const request = ++detailRequest.current
-    setDetailLoading(true); setDetail(null); setError('')
-    try { const data = await api<Transaction>(`/api/transactions/${id}`); if (request === detailRequest.current) setDetail(data) }
-    catch (e) { if (request === detailRequest.current) setError(message(e)) }
-    finally { if (request === detailRequest.current) setDetailLoading(false) }
-  }
-  return <main className="mx-auto max-w-5xl space-y-6 p-6">
+  return <main className="page">
     <h2 className="text-2xl font-semibold">Payments</h2>
+    {items.some(t => t.status === 'CREATED' && !t.is_demo) && <section className="card"><h3>Pending payments</h3><p className="muted">If you approved a payment but its verification was interrupted, recover the same order here.</p>{items.filter(t => t.status === 'CREATED' && !t.is_demo).map(t => <button key={t.id} disabled={recovering !== null} onClick={() => void recover(t)}>{recovering === t.id ? 'Verifying…' : `Retry verification #${t.id}`}</button>)}</section>}
     <section className="rounded border bg-white p-4"><h3 className="mb-3 font-semibold">New Sandbox payment</h3>
       {!checkout ? <form onSubmit={prepare} className="flex flex-wrap items-end gap-4">
         <label>Amount (USD)<input type="number" step="0.01" min="0.01" max="9999999" required value={amount} onChange={e => setAmount(e.target.value)} /></label>
@@ -116,11 +115,9 @@ export default function Payments() {
     <section className="rounded border bg-white p-4"><div className="mb-4 flex items-center justify-between"><h3 className="font-semibold">Transactions</h3><button onClick={refresh} disabled={loading}>Refresh</button></div>
       {error && <p role="alert" className="mb-3 text-red-700">{error}</p>}
       {loading ? <p role="status">Loading transactions…</p> : !items.length ? <p>{error ? 'Transactions could not be loaded.' : 'No transactions yet. Create your first Sandbox payment above.'}</p> :
-        <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr><th>Status</th><th>Amount</th><th>Payer email</th><th>Date</th><th>Details</th></tr></thead><tbody>{items.map(tx => <tr key={tx.id} className="border-t"><td><span className={tx.status === 'VERIFIED' ? 'rounded bg-green-100 px-2 py-1 text-green-800' : ''}>{tx.status}</span>{tx.is_demo && <span className="ml-2 text-amber-800">Demo — Simulated</span>}</td><td>{tx.amount} {tx.currency}</td><td>{tx.payer_email || '—'}</td><td>{new Date(tx.captured_at || tx.created_at).toLocaleString()}</td><td><button onClick={() => void openDetail(tx.id)}>View #{tx.id}</button>{tx.status === 'CREATED' && !tx.is_demo && <button className="ml-2" disabled={recovering !== null} onClick={() => void recover(tx)}>{recovering === tx.id ? 'Verifying…' : 'Retry verification'}</button>}</td></tr>)}</tbody></table></div>}
+        <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr><th>Status</th><th>Amount</th><th>Payer email</th><th>Date</th><th>Details</th></tr></thead><tbody>{items.map(tx => <tr key={tx.id} className="border-t"><td><span className={tx.status === 'VERIFIED' ? 'rounded bg-green-100 px-2 py-1 text-green-800' : ''}>{tx.status}</span>{tx.is_demo && <span className="ml-2 text-amber-800">Demo — Simulated</span>}</td><td>{tx.amount} {tx.currency}</td><td>{tx.payer_email || '—'}</td><td>{new Date(tx.captured_at || tx.created_at).toLocaleString()}</td><td><button onClick={() => void openDetail(tx.id)}>View #{tx.id}</button></td></tr>)}</tbody></table></div>}
     </section>
     {detailLoading && <p role="status">Loading transaction…</p>}
-    {detail && <section className="rounded border bg-white p-4" aria-label="Transaction detail"><h3 className="font-semibold">Transaction #{detail.id}</h3><dl className="mt-3 space-y-2">{Object.entries(detail).map(([key, value]) => <div key={key} className="break-all"><dt className="font-medium">{key.replaceAll('_', ' ')}</dt><dd>{typeof value === 'boolean' ? String(value) : value ?? '—'}</dd></div>)}</dl><button className="mt-4" onClick={() => setDetail(null)}>Close details</button><Evidence key={detail.id} id={detail.id} /></section>}
-    <Disputes />
+    {detail && <section className="rounded border bg-white p-4" aria-label="Transaction detail"><h3 className="font-semibold">Transaction #{detail.id}</h3><dl className="mt-3 space-y-2">{Object.entries(detail).map(([key, value]) => <div key={key} className="break-all"><dt className="font-medium">{key.replaceAll('_', ' ')}</dt><dd>{typeof value === 'boolean' ? String(value) : value ?? '—'}</dd></div>)}</dl><button className="mt-4" onClick={() => setDetail(null)}>Close details</button></section>}
   </main>
 }
-

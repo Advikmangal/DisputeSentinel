@@ -1,3 +1,5 @@
+> Historical implementation notes. Current endpoints and deployment steps are in [api.md](api.md) and [DEPLOY.md](DEPLOY.md).
+
 # Payment recovery and evidence workflow
 
 This update implements runtime PayPal configuration, payment recovery from the transaction list, database readiness, signed payment webhook reconciliation, PDF evidence storage, Gemini quotation extraction, deterministic coverage scoring, dispute review and Markdown exports.
@@ -27,3 +29,4 @@ This update implements runtime PayPal configuration, payment recovery from the t
 Backend regression tests cover signature rejection, event deduplication, failed-delivery recovery, ownership, public configuration, readiness failure, PDF rejection, citation filtering and the draft/edit/approve/export lifecycle. Existing mock payment tests and frontend API/build checks also run. These do not establish live PayPal capture, delivery of registered webhooks or account-specific Gemini availability.
 
 References: [PayPal webhook integration](https://developer.paypal.com/api/rest/webhooks/rest/), [Gemini models](https://ai.google.dev/gemini-api/docs/models), [Gemini structured outputs](https://ai.google.dev/gemini-api/docs/structured-output).
+
