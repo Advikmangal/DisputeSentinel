@@ -27,7 +27,7 @@ services:
           name: payoutsentinel-db
           property: connectionString
       - key: FRONTEND_ORIGIN
-        sync: false
+        value: https://payoutsentinel-web.onrender.com
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
@@ -56,9 +56,10 @@ services:
       - key: NODE_VERSION
         value: 24.13.0
       - key: VITE_API_URL
-        sync: false
+        value: https://payoutsentinel-api.onrender.com
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+
 
