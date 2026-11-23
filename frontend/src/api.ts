@@ -42,13 +42,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   await ensureServerAwake()
   if (token !== originalToken) throw new Error('Session changed. Please sign in again.')
   const headers = new Headers(options.headers)
-  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
   const controller = new AbortController()
   const abort = () => controller.abort()
   options.signal?.addEventListener('abort', abort, { once: true })
   if (options.signal?.aborted) abort()
-  const timer = setTimeout(abort, 90000)
+  const timer = setTimeout(abort, path.endsWith('/analyze') ? 180000 : 90000)
   let response: Response
   let body: any
   try {
@@ -70,4 +70,21 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return body as T
 }
 export type Transaction = { is_demo: boolean; id: number; paypal_order_id: string; paypal_capture_id: string | null; amount: string; currency: string; status: string; payer_email: string | null; description: string; created_at: string; captured_at: string | null }
+
+export async function downloadFile(path: string, name: string) {
+  const originalToken = token
+  await ensureServerAwake()
+  if (!originalToken || token !== originalToken) throw new Error('Please sign in again.')
+  const response = await fetch(`${apiBase}${path}`, { headers: { Authorization: `Bearer ${originalToken}` }, signal: AbortSignal.timeout(90000) })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.detail || 'Download failed.')
+  }
+  const blob = await response.blob()
+  if (token !== originalToken) throw new Error('Session changed.')
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url; link.download = name; link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
+}
 
