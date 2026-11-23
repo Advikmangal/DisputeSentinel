@@ -120,3 +120,16 @@ def test_contradiction_requires_review_and_empty_draft_is_honest(api, monkeypatc
     score = client.post(f'/api/transactions/{tid}/analyze').json()
     assert score['score'] == 0
     assert score['breakdown'][0]['status'] == 'review'
+
+
+
+def test_fixture_sync_reuses_legacy_case(api):
+    from app.models import Dispute
+    client, _, engine = api
+    tid = create(client).json()['transaction']['id']
+    with Session(engine) as db:
+        db.add(Dispute(transaction_id=tid, paypal_dispute_id=f'FIXTURE-{tid}',
+                       reason='SERVICE_NOT_RECEIVED', status='OPEN', amount=10, is_fixture=True, raw={}))
+        db.commit()
+    assert client.post('/api/disputes/sync').json()['added'] == 0
+    assert len(client.get('/api/disputes').json()['items']) == 1

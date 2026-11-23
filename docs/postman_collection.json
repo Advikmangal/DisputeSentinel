@@ -1,0 +1,266 @@
+{
+  "info": {
+    "name": "PayoutSentinel Sandbox workspace",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Set credentials privately. Select a PDF binary file. Approve checkout with the returned approval_url before capture. Reuse an idempotency key when retrying the same order; change it for a new order. Set dispute_id from the list response. Exports do not submit to PayPal."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": "demo-order-1"
+    },
+    {
+      "key": "transaction_id",
+      "value": ""
+    },
+    {
+      "key": "order_id",
+      "value": ""
+    },
+    {
+      "key": "dispute_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Readiness",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/ready",
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) { pm.collectionVariables.set(\"token\", pm.response.json().access_token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/transactions"
+      }
+    },
+    {
+      "name": "Checkout config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/payments/config"
+      }
+    },
+    {
+      "name": "Create Sandbox order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/payments/create-order",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": \"10.00\",\n  \"currency\": \"USD\",\n  \"description\": \"Synthetic portfolio demonstration\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201) { const t=pm.response.json().transaction; pm.collectionVariables.set(\"transaction_id\",t.id); pm.collectionVariables.set(\"order_id\",t.paypal_order_id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Capture after buyer approval",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/payments/capture",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"order_id\": \"{{order_id}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Upload text PDF (select binary file)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/pdf"
+          }
+        ],
+        "url": "{{base_url}}/api/transactions/{{transaction_id}}/evidence?filename=delivery.pdf",
+        "body": {
+          "mode": "file",
+          "file": {}
+        }
+      }
+    },
+    {
+      "name": "List evidence",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/transactions/{{transaction_id}}/evidence"
+      }
+    },
+    {
+      "name": "Analyze evidence",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{base_url}}/api/transactions/{{transaction_id}}/analyze"
+      }
+    },
+    {
+      "name": "Coverage checklist",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/transactions/{{transaction_id}}/readiness"
+      }
+    },
+    {
+      "name": "Sync disputes",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{base_url}}/api/disputes/sync"
+      }
+    },
+    {
+      "name": "List disputes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/disputes"
+      }
+    },
+    {
+      "name": "Generate draft",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{base_url}}/api/disputes/{{dispute_id}}/draft"
+      }
+    },
+    {
+      "name": "Edit response",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/disputes/{{dispute_id}}/response",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"draft_text\": \"Replace this with the reviewed response and source quotations.\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Approve reviewed response",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{base_url}}/api/disputes/{{dispute_id}}/approve"
+      }
+    },
+    {
+      "name": "Export approved Markdown",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/disputes/{{dispute_id}}/export"
+      }
+    },
+    {
+      "name": "Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/dashboard/summary"
+      }
+    }
+  ]
+}

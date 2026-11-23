@@ -148,7 +148,7 @@ def sync_disputes(db: DB, mid: MID):
     if get_settings().dispute_source == "fixture":
         for tx in txs:
             ident = f"SIMULATED-{mid}-{tx.id}"
-            if db.scalar(select(Dispute).where(Dispute.paypal_dispute_id == ident)):
+            if db.scalar(select(Dispute).where(Dispute.transaction_id == tx.id, Dispute.is_fixture.is_(True))):
                 continue
             db.add(Dispute(transaction_id=tx.id, paypal_dispute_id=ident, reason="SERVICE_NOT_RECEIVED",
                            status="WAITING_FOR_SELLER_RESPONSE", amount=tx.amount, is_fixture=True,
@@ -275,3 +275,4 @@ def dashboard(db: DB, mid: MID):
             "verified_totals": {k: str(v) for k, v in totals.items()},
             "open_disputes": sum(d.status not in ("RESOLVED", "CLOSED") for d in disputes),
             "simulated_disputes": sum(d.is_fixture for d in disputes), "readiness": scores}
+
