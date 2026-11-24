@@ -32,6 +32,19 @@ def test_readiness_reports_database_failure(api, monkeypatch):
     assert client.get('/health').status_code == 200
 
 
+def test_health_head_checks_preserve_readiness_status(api, monkeypatch):
+    client, _, engine = api
+    monkeypatch.setattr('app.main.get_engine', lambda: engine)
+    for path in ('/health', '/ready'):
+        response = client.head(path)
+        assert response.status_code == 200
+        assert response.content == b''
+    monkeypatch.setattr('app.main.get_engine', Mock(side_effect=RuntimeError('private-db-url')))
+    response = client.head('/ready')
+    assert response.status_code == 503
+    assert response.content == b''
+
+
 HEADERS = {f'paypal-{key}': 'synthetic' for key in ['auth-algo', 'cert-url', 'transmission-id', 'transmission-sig', 'transmission-time']}
 EVENT = {'id': 'WH-1', 'event_type': 'PAYMENT.CAPTURE.COMPLETED', 'resource': {'id': 'CAPTURE-1', 'supplementary_data': {'related_ids': {'order_id': 'ORDER-1'}}}}
 

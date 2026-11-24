@@ -56,8 +56,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(workspace_router)
     application.include_router(webhooks_router)
     application.add_exception_handler(PaymentError, payment_error_handler)
-    application.add_api_route("/health", health, methods=["GET"])
-    application.add_api_route("/ready", ready, methods=["GET"])
+    application.add_api_route("/health", health, methods=["GET", "HEAD"])
+    application.add_api_route("/ready", ready, methods=["GET", "HEAD"])
     return application
 
 
