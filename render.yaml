@@ -27,13 +27,13 @@ services:
           name: payoutsentinel-db
           property: connectionString
       - key: FRONTEND_ORIGIN
-        value: https://payoutsentinel-web.onrender.com
+        sync: false
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
         sync: false
       - key: PAYPAL_BASE_URL
-        sync: false
+        value: https://api-m.sandbox.paypal.com
       - key: GEMINI_API_KEY
         sync: false
       - key: JWT_SECRET

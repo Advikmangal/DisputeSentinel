@@ -79,3 +79,21 @@ Keep backups of evidence and database records before a free database expires or 
 replaced. The optional `scripts/seed_demo_data.py` creates synthetic transactions;
 it cannot recover real history. Never run `scripts/check_postgres.py` against the
 hosted database: it is a destructive test for disposable databases only.
+
+## Deployment configuration checks
+
+`FRONTEND_ORIGIN` is supplied in Render rather than hard-coded in the Blueprint.
+For the existing frontend verified on 24 November 2026, use
+`https://payoutsentinel-web-nf5z.onrender.com`. Confirm the assigned site URL before
+changing this value; an origin mismatch blocks browser login even when `/ready`
+is healthy. Blueprint sync preserves an existing manually supplied value.
+
+Frontend Render builds fail early if `VITE_API_URL` is missing, a placeholder,
+or includes `/api`, credentials, or a query. Supply the API HTTPS origin and
+rebuild. Local development can leave it empty to use the Vite proxy.
+
+Both GET and HEAD health probes are supported. `/ready` returns 503 on database
+failure; `/health` checks the running process. Migration startup has bounded
+connection, lock, and statement timeouts so unavailable databases do not leave
+a deployment waiting indefinitely. Check database availability and migration logs
+before retrying; do not reset the database.
