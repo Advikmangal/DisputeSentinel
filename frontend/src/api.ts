@@ -62,7 +62,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     clearTimeout(timer)
     options.signal?.removeEventListener('abort', abort)
   }
-  if (response.status === 401 && path !== '/api/auth/login' && token === originalToken) {
+  if (response.status === 401 && !['/api/auth/login', '/api/auth/register'].includes(path) && token === originalToken) {
     setToken(null); window.dispatchEvent(new Event('session-expired'))
   }
   if (!response.ok) throw new Error(typeof body?.detail === 'string' ? body.detail : body?.detail?.message || `Request failed (${response.status}).`)
@@ -87,4 +87,3 @@ export async function downloadFile(path: string, name: string) {
   link.href = url; link.download = name; link.click()
   setTimeout(() => URL.revokeObjectURL(url), 10000)
 }
-

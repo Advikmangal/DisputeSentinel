@@ -22,6 +22,24 @@ Quotation matching confirms source text, not document authenticity or AI accurac
 The draft is assembled deterministically from AI-extracted quotations; there is no
 unconstrained model-generated dispute narrative.
 
+## Try the public demo
+
+Open https://payoutsentinel-web-nf5z.onrender.com/ and choose **Create an account**.
+Register with an email and a 12-128 character password, then enter your own workspace
+automatically. Three clearly labeled simulated transactions are included so you can
+try Evidence Vault and fixture dispute workflows without making a Sandbox payment.
+Existing accounts can sign in normally. Sample transactions cannot be captured.
+
+Registration is `POST /api/auth/register` with `email` and `password`; it returns
+the same bearer-token response as login. Duplicate emails return 409. Passwords
+are salted and hashed with scrypt; workspace ownership is enforced by merchant ID.
+Signup is limited per process to five attempts per client address and thirty total
+per minute (429 with Retry-After). This basic demo limit resets on restart and is
+not a distributed abuse-prevention system. Email ownership is not verified and
+password reset is not provided. Use synthetic documents, not sensitive information.
+All checkouts use the project's shared PayPal Sandbox app; signup does not link a
+visitor's own merchant PayPal account. No real money moves.
+
 ## Run locally
 
 Requirements: Python 3.12, Node 22.12+ or 24, PostgreSQL.
@@ -110,8 +128,8 @@ into Postman. Deployment and hosted acceptance: [docs/DEPLOY.md](docs/DEPLOY.md)
 
 ## Portfolio scope and remaining limits
 
-This is a single-merchant-oriented demo, not a production payment processor. It does
-not provide public registration, password reset, live payments, OCR, automatic
+This is a public portfolio demo with separate merchant workspaces, not a production
+payment processor. It does not provide email verification, password reset, live payments, OCR, automatic
 PayPal response submission, or background AI jobs. Sandbox dispute sync is bounded
 to ten pages per invocation. Capture webhooks are verified and deduplicated; dispute
 updates use explicit sync. Keep demo credentials private, and use synthetic documents

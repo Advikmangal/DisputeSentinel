@@ -52,7 +52,7 @@ def unauthorized():
 
 def require_api_auth(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
     path = request.url.path.rstrip("/")
-    if not (path == "/api" or path.startswith("/api/")) or path in ("/api/auth/login", "/api/webhooks/paypal"):
+    if not (path == "/api" or path.startswith("/api/")) or path in ("/api/auth/login", "/api/auth/register", "/api/webhooks/paypal"):
         return None
     if credentials is None:
         raise unauthorized()
